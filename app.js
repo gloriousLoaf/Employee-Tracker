@@ -11,7 +11,7 @@ const connection = mysql.createConnection({
     port: 3306,
     user: `root`,
     password: `root`,
-    database: `etSchema`
+    database: `et_db`
 });
 // Connect and begin
 connection.connect((err) => {
@@ -42,7 +42,7 @@ const userQuery = () => {
                     // this may break out into more cases & functions
                     manipulateData();
                     break;
-
+                // This is the only case that does anything yet
                 case `View department, role or employee details.`:
                     viewData();
                     break;
@@ -91,6 +91,7 @@ const manipulateData = () => {
 
 const addData = (data) => {
     // code
+    query.queryDep()
 }
 
 const deleteData = (data) => {
@@ -99,7 +100,7 @@ const deleteData = (data) => {
 
 // viewData guides user through appropriate constructors
 const viewData = () => {
-    return inquirer.prompt(
+    return inquirer.prompt([
         {
             type: `list`,
             name: `viewType`,
@@ -107,55 +108,46 @@ const viewData = () => {
             choices: [`DEPARTMENT`, `ROLE`, `EMPLOYEE`]
         },
         {
-            when: response => response.viewData === `DEPARTMENT`,
+            when: response => response.viewType === `DEPARTMENT`,
             type: `list`,
             name: `viewDep`,
             message: `Which Department?`,
-            choices: () => {
-                let dep = response.viewData.toLowerCase();
-                // const depArray = res.map(query => query.queryDep(dep));
-                const depArray = query.queryDep(dep).map(items => items.name);
-                return depArray;
-            }
-
+            // THIS. omg this...
+            choices: () => query.queryDep()
         },
         {
-            when: response => response.viewData === `ROLE`,
+            when: response => response.viewType === `ROLE`,
             type: `list`,
             name: `viewRole`,
             message: `Which Role?`,
             choices: () => {
-                let role = response.viewData.toLowerCase();
-                const roleArray = query.queryRole(role).map(items => items.title);
-                return roleArray;
+
             }
         },
         {
-            when: response => response.viewData === `EMPLOYEE`,
+            when: response => response.viewType === `EMPLOYEE`,
             type: `list`,
             name: `viewEmp`,
             message: `Which Employee?`,
             choices: () => {
-                let emp = response.viewData.toLowerCase();
-                const empArray = query.queryEmp(emp).map(items => (items.firstName, items.lastName));
-                return empArray;
-            }
-        })
-        // I don't know about this...
-        .then((response) => {
-            if (response.viewType === `DEPARTMENT`) {
-                query.queryDep();
-            }
-            else if (response.viewType === `ROLE`) {
-                query.queryRole();
-            }
-            else {
-                query.queryEmp();
-            }
-            userQuery();
-        })
-}
 
+            }
+        }
+    ])
+    // would .then() work better?
+    // .then((response) => {
+    //     if (response.viewType === `DEPARTMENT`) {
+    //         // code
+    //     }
+    //     else if (response.viewType === `ROLE`) {
+    //         // code
+    //     }
+    //     else {
+    //         // code
+    //     }
+    //     // userQuery();
+    // })
+}
 
 const empUpdate = () => {
     // code
