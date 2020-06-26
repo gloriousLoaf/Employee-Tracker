@@ -1,7 +1,7 @@
-DROP DATABASE IF EXISTS et_db;
-CREATE database et_db;
+DROP DATABASE IF EXISTS employese_db;
+CREATE database employees_db;
 
-USE et_db;
+USE employees_db;
 
 CREATE TABLE department (
   id INT NOT NULL AUTO_INCREMENT,
@@ -10,9 +10,9 @@ CREATE TABLE department (
 );
 
 CREATE TABLE role (
-  id INT NOT NULLY AUTO_INCREMENT,
+  id INT NOT NULL AUTO_INCREMENT,
   title VARCHAR(30) NOT NULL,
-  salary DECIMAL(10,4) NOT NULL,
+  salary DECIMAL(10,2) NOT NULL,
   department_id INT NOT NULL,
   PRIMARY KEY(id)
 );

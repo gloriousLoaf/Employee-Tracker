@@ -1,7 +1,7 @@
 // Dependecies
 const mysql = require(`mysql`);
 const inquirer = require(`inquirer`);
-const conTable = require(`console.table`);
+const build = require(`./lib/classes`);
 // sqlQueries.js utilizes classes.js
 const query = require(`./lib/sqlQueries`);
 
@@ -11,7 +11,7 @@ const connection = mysql.createConnection({
     port: 3306,
     user: `root`,
     password: `root`,
-    database: `et_db`
+    database: `employees_db`
 });
 // Connect and begin
 connection.connect((err) => {
@@ -19,8 +19,9 @@ connection.connect((err) => {
     userQuery();
 });
 
-// Inquirer
+// Begin Inquirer
 const userQuery = () => {
+    console.log(`Welcome to Employee Tracker.`)
     // first offer all options
     return inquirer.prompt(
         {
@@ -28,131 +29,176 @@ const userQuery = () => {
             name: `userTask`,
             message: `What would you like to do?`,
             choices: [
-                `Add / Delete departments, roles or employees.`,
-                `View department, role or employee details.`,
-                `Update employee details.`,
-                `View budget report.`,
+                `View all employees`,
+                `View employees by department`,
+                `Add employee`,
+                `Update employee role`,
                 `Exit.`
             ]
         })
         //then switch/case to call appropriate functions
         .then((response) => {
             switch (response.userTask) {
-                case `Add / Delete departments, roles or employees.`:
-                    // this may break out into more cases & functions
-                    manipulateData();
+                case `View all employees`:
+                    callEmp();
                     break;
-                // This is the only case that does anything yet
-                case `View department, role or employee details.`:
-                    viewData();
+                case `View employees by department`:
+                    callDep();
                     break;
 
-                case `Update employee details.`:
-                    empUpdate();
+                case `Add employee`:
+                    addEmp();
                     break;
 
-                case `View budget report.`:
+                case `Update employee role`:
                     payroll();
                     break;
 
                 case `Exit.`:
-                    connection.end();
+                    end();
                     break;
             }
         });
 };
 
-// manipulateData() guides user through Add / Delete processes
-const manipulateData = () => {
-    return inquirer.prompt(
+// keepGoing() restarts or quits, or at least it should
+// Inquirer just sort gives up all the time, with code still to run
+// OR it won't actually end when I specifically tell it to
+const keepGoing = () => {
+    inquirer.prompt([
         {
             type: `list`,
-            name: `changeType`,
-            message: `Add / Delete which data type?`,
-            choices: [`DEPARTMENT`, `ROLE`, `EMPLOYEE`]
-        },
-        {
-            type: `list`,
-            name: `addOrDelete`,
-            message: `Add or Delete data?`,
-            choices: [`ADD`, `DELETE`]
-        })
-        .then((response) => {
-            // hold changeType in var, pass to functions
-            let dataType = response.changeType;
-            if (response.addOrDelete === `ADD`) {
-                addData(dataType);
-            }
-            else {
-                deleteData(dataType);
-            }
-        })
-};
-
-const addData = (data) => {
-    // code
-    query.queryDep()
+            name: `yesNo`,
+            message: `Would you like to do more?`,
+            choices: [`Yes`, `No`]
+        }
+    ]).then(response => {
+        if (response.yesNo === `Yes`) {
+            userQuery();
+        }
+        else {
+            end();
+        }
+    })
 }
 
-const deleteData = (data) => {
-    // code
+// callEmp() & callDep() uses sqlQueries.js
+const callEmp = () => {
+    query.queryEmp();
+    setTimeout(() => keepGoing(), 500);
 }
 
-// viewData guides user through appropriate constructors
-const viewData = () => {
+// callDep() displays array of choices with id's from DB
+const callDep = () => {
+    query.queryDep();
+    setTimeout(() => viewDep(), 500);
+}
+
+// pulls up all current departments
+const viewDep = () => {
     return inquirer.prompt([
         {
-            type: `list`,
-            name: `viewType`,
-            message: `View which data type?`,
-            choices: [`DEPARTMENT`, `ROLE`, `EMPLOYEE`]
-        },
-        {
-            when: response => response.viewType === `DEPARTMENT`,
-            type: `list`,
-            name: `viewDep`,
-            message: `Which Department?`,
-            // THIS. omg this...
-            choices: () => query.queryDep()
-        },
-        {
-            when: response => response.viewType === `ROLE`,
-            type: `list`,
-            name: `viewRole`,
-            message: `Which Role?`,
-            choices: () => {
-
-            }
-        },
-        {
-            when: response => response.viewType === `EMPLOYEE`,
-            type: `list`,
-            name: `viewEmp`,
-            message: `Which Employee?`,
-            choices: () => {
-
-            }
+            type: `input`,
+            name: `allDeps`,
+            message: `Which Department? Enter ID number:`
         }
-    ])
-    // would .then() work better?
-    // .then((response) => {
-    //     if (response.viewType === `DEPARTMENT`) {
-    //         // code
-    //     }
-    //     else if (response.viewType === `ROLE`) {
-    //         // code
-    //     }
-    //     else {
-    //         // code
-    //     }
-    //     // userQuery();
-    // })
+    ]).then(response => {
+        let dep = response.allDeps;
+        query.queryEmpByDep(dep);
+        setTimeout(() => keepGoing(), 500)
+    })
 }
 
-const empUpdate = () => {
-    // code
-};
+const newEmp = {};
+// walks user through creating a new employee, sends it to empSQL() below
+const addEmp = () => {
+    inquirer.prompt([
+        {
+            type: `input`,
+            name: `firstName`,
+            message: `What is the person's first name?`
+        },
+        {
+            type: `input`,
+            name: `lastName`,
+            message: `What is their last name?`
+        }
+    ]).then(response => {
+        // add name to newEmp{}
+        newEmp.first_name = response.firstName;
+        newEmp.last_name = response.lastName;
+        // query for available roles
+        connection.query(`SELECT id, title FROM role`, (err, res) => {
+            const roles = [];
+            if (err) throw err;
+            for (i in res) {
+                roles.push(res[i].title);
+            }
+            inquirer.prompt([
+                {
+                    type: `list`,
+                    name: `role`,
+                    message: `Select employee's role:`,
+                    choices: roles
+                }
+            ]).then(response => {
+                // convert response.role to an ID based on index, add to newEmp{}
+                roles.forEach((role, index) => {
+                    if (role === response.role) {
+                        newEmp.role_id = index + 1;
+                    }
+                })
+                // query for current managers
+                connection.query(`SELECT employee.id, concat(manager.first_name, " ", manager.last_name) AS manager_name FROM employee INNER JOIN employee AS manager ON manager.id = employee.manager_id`,
+                    (err, res) => {
+                        const managers = [];
+                        if (err) throw err;
+                        // filter out dupes, keep just the names
+                        let temp = [...new Set(res.map(res => res.manager_name))]
+                        for (i in temp) {
+                            managers.push(temp[i]);
+                        }
+                        // add null as the last option
+                        managers.push(`null`);
+                        inquirer.prompt([
+                            {
+                                type: `list`,
+                                name: `manager`,
+                                message: `Select employee's manager:`,
+                                choices: managers
+                            }
+                        ])
+                            // convert manager name to ID, like with roles
+                            .then(response => {
+                                managers.forEach((human, index) => {
+                                    if (response.manager === `null`) {
+                                        newEmp.manager_id = `null`;
+                                    }
+                                    else if (human === response.manager) {
+                                        newEmp.manager_id = index + 1;
+                                    }
+                                })
+                                console.log(newEmp);
+                                // // build an Employee obj using classes.js
+                                // let addEmp = new build.Employee(newEmp.firstName, newEmp.lastName, newEmp.roleID, newEmp.managerID);
+                                empSQL();
+                            })
+                    })
+            })
+        })
+    })
+}
 
-const payroll = () => {
-    // code
-};
+// sends addEmp class constructor to MySQL Database
+const empSQL = () => {
+    connection.query(`INSERT INTO employee SETS ?`, newEmp, (err, res) => {
+        if (err) throw err;
+    })
+    keepGoing();
+}
+
+// please end?
+const end = () => {
+    connection.end();
+    return console.log(`Thanks for using Employee Tracker.`);
+}
