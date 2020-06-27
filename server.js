@@ -1,9 +1,7 @@
 // Dependecies
 const mysql = require(`mysql`);
 const inquirer = require(`inquirer`);
-const build = require(`./lib/classes`);
-// sqlQueries.js utilizes classes.js
-const query = require(`./lib/sqlQueries`);
+const query = require(`./lib/queries`);
 
 // DB connection
 const connection = mysql.createConnection({
@@ -45,7 +43,6 @@ const userQuery = () => {
                 `View Employees, Departments or Roles`,
                 `Add Employees, Departments or Roles`,
                 `Update Employee Roles`,
-                `View financial report`,
                 `Exit.`
             ]
         })
@@ -58,11 +55,8 @@ const userQuery = () => {
                 case `Add Employees, Departments or Roles`:
                     addOptions();
                     break;
-                // not built yet
                 case `Update Employee Roles`:
                     changeRole();
-                case `View financial report`:
-                    payroll();
                     break;
                 case `Exit.`:
                     end();
@@ -115,7 +109,6 @@ const addOptions = () => {
             case `Department`:
                 addDep();
                 break;
-            // not built yet
             case `Role`:
                 addRole();
                 break;
@@ -142,7 +135,7 @@ const keepGoing = () => {
     })
 };
 
-// callEmp() & callDep() uses sqlQueries.js
+// callEmp() & callDep() use queries.js
 const callEmp = () => {
     query.queryEmp();
     setTimeout(() => keepGoing(), 500);
@@ -169,19 +162,19 @@ const showDep = () => {
     })
 };
 
-// uses queryRole() in sqlQueries.js
+// uses queryRole() in queries.js
 const viewRole = () => {
     query.queryRole();
     setTimeout(() => keepGoing(), 500)
 };
 
-// uses queryDep() in sqlQueries.js
+// uses queryDep() in queries.js
 const viewDep = () => {
     query.queryDep();
     setTimeout(() => keepGoing(), 500)
 };
 
-/* TRIED to run the queries in addEmp() from the sqlQueries.js file,
+/* TRIED to run the queries in addEmp() from the queries.js file,
     but ran into async issues that I could not iron out. */
 // walks user through creating a new employee, sends it to empSQL() below
 const newEmp = {};
@@ -253,7 +246,7 @@ const addEmp = () => {
                                     }
                                 })
                                 console.log(newEmp);
-                                // pass newEmp{} to empSQL in sqlQueries.js
+                                // pass newEmp{} to empSQL in queries.js
                                 query.empSQL(newEmp);
                                 keepGoing();
                             })
@@ -263,7 +256,7 @@ const addEmp = () => {
     })
 };
 
-// walks use through creating new Department, sends to sqlQueries.js
+// walks use through creating new Department, sends to queries.js
 const newDep = {};
 const addDep = () => {
     return inquirer.prompt([
@@ -279,42 +272,70 @@ const addDep = () => {
     })
 };
 
+// walks use through creating new Role, sends to queries.js
 const newRole = {};
 const addRole = () => {
     return inquirer.prompt([
         {
             type: `input`,
-            name: `roleName`,
-            message: `What is the Role's name?`
+            name: `roleTitle`,
+            message: `What is the Role's title?`
         },
         {
             type: `input`,
             name: `roleSalary`,
             message: `What is the Role's salary? (No $ or comma)`
-        },
-        {
-            type: `list`,
-            name: `roleDep`,
-            message: `What is Department will host this Role?`,
-            choices: query.queryRole()                                  // RIGHT HERE!!
         }
     ]).then(response => {
-        newRole.name = response.roleName;
-        query.roleSQL(newRole);
-        keepGoing();
+        newRole.title = response.roleTitle;
+        newRole.salary = response.roleSalary;
+        query.queryDep();
+    }).then(() => {
+        inquirer.prompt([
+            {
+                type: `input`,
+                name: `roleDepId`,
+                message: `Enter Department ID number:`
+            }
+        ]).then(response => {
+            newRole.department_id = response.roleDepId;
+            query.roleSQL(newRole);
+            keepGoing();
+        })
     })
 };
 
+// // walks use through updating and employee's Role, sends to queries.js
+const updateRole = [];
 const changeRole = () => {
-    // code
-    return inquirer.prompt([
+    query.queryEmp();
+    setTimeout(() => inquirer.prompt([
         {
-
+            type: `input`,
+            name: `empId`,
+            message: `Enter Employee ID to change role:`
         }
-    ])
-}
+    ]).then(response => {
+        updateRole.push(response.empId);
+        query.queryRole();
+    }).then(() => {
+        setTimeout(() => inquirer.prompt([
+            {
+                type: `input`,
+                name: `newRoleId`,
+                message: `Enter the ID of new role:`
+            }
+        ]).then(response => {
+            updateRole.push(response.newRoleId);
+            /* info collected makes sense from user view,
+                but its backwards in the array */
+            query.updateRoleSQL([updateRole[1], updateRole[0]]);
+            keepGoing();
+        }), 500)
+    }), 500)
+};
 
-// please end?
+// bye!
 const end = () => {
     connection.end();
     return console.log(`Thanks for using Employee Tracker.`);
