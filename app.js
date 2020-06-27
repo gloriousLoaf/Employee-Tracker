@@ -16,8 +16,21 @@ const connection = mysql.createConnection({
 // Connect and begin
 connection.connect((err) => {
     if (err) throw err;
-    userQuery();
+    welcomeAscii();
 });
+
+// ASCII Art like the AOL dayz (queue the dial-up screech)
+function welcomeAscii() {
+    console.log(String.raw`
+▓▓▓▓▓▓▓                                                    ▓▓▓▓▓▓▓                                           
+▓       ▓    ▓ ▓▓▓▓▓  ▓       ▓▓▓▓  ▓   ▓ ▓▓▓▓▓▓ ▓▓▓▓▓▓       ▓    ▓▓▓▓▓    ▓▓    ▓▓▓▓  ▓    ▓ ▓▓▓▓▓▓ ▓▓▓▓▓  
+▓       ▓▓  ▓▓ ▓    ▓ ▓      ▓    ▓  ▓ ▓  ▓      ▓            ▓    ▓    ▓  ▓  ▓  ▓    ▓ ▓   ▓  ▓      ▓    ▓ 
+▓▓▓▓▓   ▓ ▓▓ ▓ ▓    ▓ ▓      ▓    ▓   ▓   ▓▓▓▓▓  ▓▓▓▓▓        ▓    ▓    ▓ ▓    ▓ ▓      ▓▓▓▓   ▓▓▓▓▓  ▓    ▓ 
+▓       ▓    ▓ ▓▓▓▓▓  ▓      ▓    ▓   ▓   ▓      ▓            ▓    ▓▓▓▓▓  ▓▓▓▓▓▓ ▓      ▓  ▓   ▓      ▓▓▓▓▓  
+▓       ▓    ▓ ▓      ▓      ▓    ▓   ▓   ▓      ▓            ▓    ▓   ▓  ▓    ▓ ▓    ▓ ▓   ▓  ▓      ▓   ▓  
+▓▓▓▓▓▓▓ ▓    ▓ ▓      ▓▓▓▓▓▓  ▓▓▓▓    ▓   ▓▓▓▓▓▓ ▓▓▓▓▓▓       ▓    ▓    ▓ ▓    ▓  ▓▓▓▓  ▓    ▓ ▓▓▓▓▓▓ ▓    ▓ `);
+    userQuery();
+}
 
 // Begin Inquirer
 const userQuery = () => {
@@ -29,31 +42,28 @@ const userQuery = () => {
             name: `userTask`,
             message: `What would you like to do?`,
             choices: [
-                `View all employees`,
-                `View employees by department`,
-                `Add employee`,
-                `Update employee role`,
+                `View Employees, Departments or Roles`,
+                `Add Employees, Departments or Roles`,
+                `Update Employee Roles`,
+                `View financial report`,
                 `Exit.`
             ]
         })
         //then switch/case to call appropriate functions
         .then((response) => {
             switch (response.userTask) {
-                case `View all employees`:
-                    callEmp();
+                case `View Employees, Departments or Roles`:
+                    viewOptions();
                     break;
-                case `View employees by department`:
-                    callDep();
+                case `Add Employees, Departments or Roles`:
+                    addOptions();
                     break;
-
-                case `Add employee`:
-                    addEmp();
-                    break;
-
-                case `Update employee role`:
+                // not built yet
+                case `Update Employee Roles`:
+                    changeRole();
+                case `View financial report`:
                     payroll();
                     break;
-
                 case `Exit.`:
                     end();
                     break;
@@ -61,9 +71,59 @@ const userQuery = () => {
         });
 };
 
+// viewOptions() sends user to the right functions below
+const viewOptions = () => {
+    return inquirer.prompt([
+        {
+            type: `list`,
+            name: `viewChoice`,
+            message: `What would you like to view?`,
+            choices: [`All Employees`, `Employees by Department`, `Departments`, `Roles`]
+        }
+    ]).then(response => {
+        switch (response.viewChoice) {
+            case `All Employees`:
+                callEmp();
+                break;
+            case `Employees by Department`:
+                callDep();
+                break;
+            case `Departments`:
+                viewDep();
+                break;
+            case `Roles`:
+                viewRole();
+                break;
+        }
+    })
+}
+
+// addOptions() sends user to the right functions below
+const addOptions = () => {
+    return inquirer.prompt([
+        {
+            type: `list`,
+            name: `addChoice`,
+            message: `What would you like to add?`,
+            choices: [`Employee`, `Department`, `Role`]
+        }
+    ]).then(response => {
+        switch (response.addChoice) {
+            case `Employee`:
+                addEmp();
+                break;
+            case `Department`:
+                addDep();
+                break;
+            // not built yet
+            case `Role`:
+                addRole();
+                break;
+        }
+    })
+}
+
 // keepGoing() restarts or quits, or at least it should
-// Inquirer just sort gives up all the time, with code still to run
-// OR it won't actually end when I specifically tell it to
 const keepGoing = () => {
     inquirer.prompt([
         {
@@ -80,22 +140,22 @@ const keepGoing = () => {
             end();
         }
     })
-}
+};
 
 // callEmp() & callDep() uses sqlQueries.js
 const callEmp = () => {
     query.queryEmp();
     setTimeout(() => keepGoing(), 500);
-}
+};
 
 // callDep() displays array of choices with id's from DB
 const callDep = () => {
     query.queryDep();
-    setTimeout(() => viewDep(), 500);
-}
+    setTimeout(() => showDep(), 500);
+};
 
 // pulls up all current departments
-const viewDep = () => {
+const showDep = () => {
     return inquirer.prompt([
         {
             type: `input`,
@@ -107,10 +167,24 @@ const viewDep = () => {
         query.queryEmpByDep(dep);
         setTimeout(() => keepGoing(), 500)
     })
-}
+};
 
-const newEmp = {};
+// uses queryRole() in sqlQueries.js
+const viewRole = () => {
+    query.queryRole();
+    setTimeout(() => keepGoing(), 500)
+};
+
+// uses queryDep() in sqlQueries.js
+const viewDep = () => {
+    query.queryDep();
+    setTimeout(() => keepGoing(), 500)
+};
+
+/* TRIED to run the queries in addEmp() from the sqlQueries.js file,
+    but ran into async issues that I could not iron out. */
 // walks user through creating a new employee, sends it to empSQL() below
+const newEmp = {};
 const addEmp = () => {
     inquirer.prompt([
         {
@@ -179,26 +253,69 @@ const addEmp = () => {
                                     }
                                 })
                                 console.log(newEmp);
-                                // // build an Employee obj using classes.js
-                                // let addEmp = new build.Employee(newEmp.firstName, newEmp.lastName, newEmp.roleID, newEmp.managerID);
-                                empSQL();
+                                // pass newEmp{} to empSQL in sqlQueries.js
+                                query.empSQL(newEmp);
+                                keepGoing();
                             })
                     })
             })
         })
     })
-}
+};
 
-// sends addEmp class constructor to MySQL Database
-const empSQL = () => {
-    connection.query(`INSERT INTO employee SETS ?`, newEmp, (err, res) => {
-        if (err) throw err;
+// walks use through creating new Department, sends to sqlQueries.js
+const newDep = {};
+const addDep = () => {
+    return inquirer.prompt([
+        {
+            type: `input`,
+            name: `depName`,
+            message: `What is the Department's name?`
+        }
+    ]).then(response => {
+        newDep.name = response.depName;
+        query.depSQL(newDep);
+        keepGoing();
     })
-    keepGoing();
+};
+
+const newRole = {};
+const addRole = () => {
+    return inquirer.prompt([
+        {
+            type: `input`,
+            name: `roleName`,
+            message: `What is the Role's name?`
+        },
+        {
+            type: `input`,
+            name: `roleSalary`,
+            message: `What is the Role's salary? (No $ or comma)`
+        },
+        {
+            type: `list`,
+            name: `roleDep`,
+            message: `What is Department will host this Role?`,
+            choices: query.queryRole()                                  // RIGHT HERE!!
+        }
+    ]).then(response => {
+        newRole.name = response.roleName;
+        query.roleSQL(newRole);
+        keepGoing();
+    })
+};
+
+const changeRole = () => {
+    // code
+    return inquirer.prompt([
+        {
+
+        }
+    ])
 }
 
 // please end?
 const end = () => {
     connection.end();
     return console.log(`Thanks for using Employee Tracker.`);
-}
+};
