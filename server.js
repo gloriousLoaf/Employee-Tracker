@@ -46,7 +46,7 @@ const userQuery = () => {
                 `Exit.`
             ]
         })
-        //then switch/case to call appropriate functions
+        // then switch/case to call appropriate functions
         .then((response) => {
             switch (response.userTask) {
                 case `View Employees, Departments or Roles`:
@@ -116,7 +116,7 @@ const addOptions = () => {
     })
 }
 
-// keepGoing() restarts or quits, or at least it should
+// keepGoing() restarts inquirer or quits
 const keepGoing = () => {
     inquirer.prompt([
         {
@@ -305,7 +305,7 @@ const addRole = () => {
     })
 };
 
-// // walks use through updating and employee's Role, sends to queries.js
+// walks use through updating an employee's Role, sends to queries.js
 const updateRole = [];
 const changeRole = () => {
     query.queryEmp();
